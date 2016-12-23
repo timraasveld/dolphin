@@ -762,6 +762,17 @@ Renderer::Renderer()
 
   UpdateActiveConfig();
   ClearEFBCache();
+
+  // Setup depth buffer
+  glGenBuffers(1, m_pboIds);
+
+  m_depth_buffer_size = EFB_WIDTH * EFB_HEIGHT * sizeof(GL_FLOAT); // One channel only for depth
+
+  m_depth_buffer = new GLubyte[m_depth_buffer_size];
+
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pboIds[0]);
+  glBufferData(GL_PIXEL_PACK_BUFFER, m_depth_buffer_size, 0, GL_STREAM_READ);
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 }
 
 Renderer::~Renderer()
@@ -956,12 +967,14 @@ u32 Renderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 poke_data)
         RestoreAPIState();
       }
 
-      std::unique_ptr<float[]> depthMap(new float[targetPixelRcWidth * targetPixelRcHeight]);
+      // Fetch depth buffer from PBO
+      glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pboIds[0]);
+      m_depth_buffer = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+      glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
-      glReadPixels(targetPixelRc.left, targetPixelRc.bottom, targetPixelRcWidth,
-                   targetPixelRcHeight, GL_DEPTH_COMPONENT, GL_FLOAT, depthMap.get());
-
-      UpdateEFBCache(type, cacheRectIdx, efbPixelRc, targetPixelRc, depthMap.get());
+      return 0; // TODO: replace with something like
+                //       m_depth_buffer[targetPixelRc.left][targetPixelRc.top]
+                //       after properly populating buffer
     }
 
     u32 xRect = x % EFB_CACHE_RECT_SIZE;
@@ -1551,10 +1564,19 @@ void Renderer::DrawEFB(GLuint framebuffer, const TargetRectangle& target_rc,
 {
   TargetRectangle scaled_source_rc = ConvertEFBRectangle(source_rc);
 
+  AsyncUpdateDepthBuffer();
+
   // for msaa mode, we must resolve the efb content to non-msaa
   GLuint tex = FramebufferManager::ResolveAndGetRenderTarget(source_rc);
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
   BlitScreen(scaled_source_rc, target_rc, tex, s_target_width, s_target_height);
+}
+
+void Renderer::AsyncUpdateDepthBuffer()
+{
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pboIds[0]);
+  glReadPixels(0, 0, EFB_WIDTH, EFB_HEIGHT, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 }
 
 void Renderer::DrawVirtualXFB(GLuint framebuffer, const TargetRectangle& target_rc, u32 xfb_addr,
