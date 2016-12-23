@@ -118,7 +118,7 @@ private:
                  const XFBSourceBase* const* xfb_sources, u32 xfb_count, u32 fb_width,
                  u32 fb_stride, u32 fb_height);
   void DrawEFB(GLuint framebuffer, const TargetRectangle& target_rc, const EFBRectangle& source_rc);
-  void AsyncUpdateDepthMap();
+  void AsyncUpdateDepthBuffer();
   void DrawVirtualXFB(GLuint framebuffer, const TargetRectangle& target_rc, u32 xfb_addr,
                       const XFBSourceBase* const* xfb_sources, u32 xfb_count, u32 fb_width,
                       u32 fb_stride, u32 fb_height);
@@ -136,6 +136,7 @@ private:
                          u32 fb_stride, u32 fb_height, u64 ticks);
 
   GLuint m_pboIds[1];
+  long m_depth_buffer_size; // TODO: make local to initialization logic
   GLubyte* m_depth_buffer;
 
   // Frame dumping framebuffer, we render to this, then read it back

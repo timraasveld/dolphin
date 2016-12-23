@@ -766,12 +766,13 @@ Renderer::Renderer()
   // Setup depth buffer
   glGenBuffers(1, m_pboIds);
 
-  int depth_buffer_size = EFB_WIDTH * EFB_HEIGHT * sizeof(GL_FLOAT); // One channel only for depth
+  m_depth_buffer_size = EFB_WIDTH * EFB_HEIGHT * sizeof(GL_FLOAT); // One channel only for depth
 
-  m_depth_buffer = new GLubyte[depth_buffer_size];
+  m_depth_buffer = new GLubyte[m_depth_buffer_size];
 
-  memset(m_depth_buffer, 255, depth_buffer_size);
-  glBufferData(GL_PIXEL_PACK_BUFFER, depth_buffer_size, 0, GL_STREAM_READ);
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pboIds[0]);
+  glBufferData(GL_PIXEL_PACK_BUFFER, m_depth_buffer_size, 0, GL_STREAM_READ);
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 }
 
 Renderer::~Renderer()
@@ -965,6 +966,11 @@ u32 Renderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 poke_data)
 
         RestoreAPIState();
       }
+
+      // Fetch depth buffer from PBO
+      glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pboIds[0]);
+      m_depth_buffer = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+      glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
       return 0; // TODO: replace with something like
                 //       m_depth_buffer[targetPixelRc.left][targetPixelRc.top]
@@ -1570,6 +1576,7 @@ void Renderer::AsyncUpdateDepthBuffer()
 {
   glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pboIds[0]);
   glReadPixels(0, 0, EFB_WIDTH, EFB_HEIGHT, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 }
 
 void Renderer::DrawVirtualXFB(GLuint framebuffer, const TargetRectangle& target_rc, u32 xfb_addr,
