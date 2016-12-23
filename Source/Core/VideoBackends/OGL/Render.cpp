@@ -966,7 +966,9 @@ u32 Renderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 poke_data)
         RestoreAPIState();
       }
 
-      return 0;
+      return 0; // TODO: replace with something like
+                //       m_depth_buffer[targetPixelRc.left][targetPixelRc.top]
+                //       after properly populating buffer
     }
 
     u32 xRect = x % EFB_CACHE_RECT_SIZE;
@@ -1556,7 +1558,7 @@ void Renderer::DrawEFB(GLuint framebuffer, const TargetRectangle& target_rc,
 {
   TargetRectangle scaled_source_rc = ConvertEFBRectangle(source_rc);
 
-  AsyncUpdateDepthMap();
+  AsyncUpdateDepthBuffer();
 
   // for msaa mode, we must resolve the efb content to non-msaa
   GLuint tex = FramebufferManager::ResolveAndGetRenderTarget(source_rc);
@@ -1564,7 +1566,7 @@ void Renderer::DrawEFB(GLuint framebuffer, const TargetRectangle& target_rc,
   BlitScreen(scaled_source_rc, target_rc, tex, s_target_width, s_target_height);
 }
 
-void Renderer::AsyncUpdateDepthMap()
+void Renderer::AsyncUpdateDepthBuffer()
 {
   glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pboIds[0]);
   glReadPixels(0, 0, EFB_WIDTH, EFB_HEIGHT, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
