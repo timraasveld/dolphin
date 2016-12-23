@@ -762,6 +762,16 @@ Renderer::Renderer()
 
   UpdateActiveConfig();
   ClearEFBCache();
+
+  // Setup depth buffer
+  glGenBuffers(1, m_pboIds);
+
+  int depth_buffer_size = EFB_WIDTH * EFB_HEIGHT * sizeof(GL_FLOAT); // One channel only for depth
+
+  m_depth_buffer = new GLubyte[depth_buffer_size];
+
+  memset(m_depth_buffer, 255, depth_buffer_size);
+  glBufferData(GL_PIXEL_PACK_BUFFER, depth_buffer_size, 0, GL_STREAM_READ);
 }
 
 Renderer::~Renderer()
@@ -956,12 +966,7 @@ u32 Renderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 poke_data)
         RestoreAPIState();
       }
 
-      std::unique_ptr<float[]> depthMap(new float[targetPixelRcWidth * targetPixelRcHeight]);
-
-      glReadPixels(targetPixelRc.left, targetPixelRc.bottom, targetPixelRcWidth,
-                   targetPixelRcHeight, GL_DEPTH_COMPONENT, GL_FLOAT, depthMap.get());
-
-      UpdateEFBCache(type, cacheRectIdx, efbPixelRc, targetPixelRc, depthMap.get());
+      return 0;
     }
 
     u32 xRect = x % EFB_CACHE_RECT_SIZE;
@@ -1551,10 +1556,18 @@ void Renderer::DrawEFB(GLuint framebuffer, const TargetRectangle& target_rc,
 {
   TargetRectangle scaled_source_rc = ConvertEFBRectangle(source_rc);
 
+  AsyncUpdateDepthMap();
+
   // for msaa mode, we must resolve the efb content to non-msaa
   GLuint tex = FramebufferManager::ResolveAndGetRenderTarget(source_rc);
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
   BlitScreen(scaled_source_rc, target_rc, tex, s_target_width, s_target_height);
+}
+
+void Renderer::AsyncUpdateDepthMap()
+{
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pboIds[0]);
+  glReadPixels(0, 0, EFB_WIDTH, EFB_HEIGHT, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 }
 
 void Renderer::DrawVirtualXFB(GLuint framebuffer, const TargetRectangle& target_rc, u32 xfb_addr,

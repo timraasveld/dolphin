@@ -118,6 +118,7 @@ private:
                  const XFBSourceBase* const* xfb_sources, u32 xfb_count, u32 fb_width,
                  u32 fb_stride, u32 fb_height);
   void DrawEFB(GLuint framebuffer, const TargetRectangle& target_rc, const EFBRectangle& source_rc);
+  void AsyncUpdateDepthMap();
   void DrawVirtualXFB(GLuint framebuffer, const TargetRectangle& target_rc, u32 xfb_addr,
                       const XFBSourceBase* const* xfb_sources, u32 xfb_count, u32 fb_width,
                       u32 fb_stride, u32 fb_height);
@@ -133,6 +134,9 @@ private:
   void DumpFrameUsingFBO(const EFBRectangle& source_rc, u32 xfb_addr,
                          const XFBSourceBase* const* xfb_sources, u32 xfb_count, u32 fb_width,
                          u32 fb_stride, u32 fb_height, u64 ticks);
+
+  GLuint m_pboIds[1];
+  GLubyte* m_depth_buffer;
 
   // Frame dumping framebuffer, we render to this, then read it back
   void PrepareFrameDumpRenderTexture(u32 width, u32 height);
